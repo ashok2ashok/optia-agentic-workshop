@@ -1,0 +1,6 @@
+# Optia Agentic Workshop - Python deps. Fastest setup (avoids PEP 668):
+#   python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+#   pip install -r requirements.txt
+# then select the .venv interpreter as your notebook kernel. See SETUP.md.
+
+anthropic>=0.69
