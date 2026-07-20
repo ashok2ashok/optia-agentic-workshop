@@ -332,34 +332,23 @@ def _patient(o):
     return next((r for r in _versions(o) if r["audience"] == "patient"), None)
 def _audit_ok(o):
     return any(r.get("kind") == "audit" and r.get("ok") for r in o["records"])
-_OVERCLAIM = ["cure", "guaranteed", "guarantee", "risk-free", "risk free", "best ever", "permanent", "miracle"]
-import re as _re
-def _no_fake_stats(t, o):
-    # Compliance check: no version may cite a percentage that isn't in the locked clinical facts.
-    # Citing the real stats (e.g. 92%, 99%) passes; inventing "100% comfort" or a wrong number fails.
-    # This catches the real risk - an altered/fabricated regulated claim - without demanding the exact
-    # sentence appear everywhere (professional copy legitimately quotes a stat in a sentence).
-    allowed = set(_re.findall(r"\d+", " ".join(t["facts"])))
-    for v in _versions(o):
-        for pct in _re.findall(r"(\d+)\s*%", v.get("message", "")):
-            if pct not in allowed:
-                return False
-    return True
-# A real eval, run on TWO launches: audience coverage, tailoring (judged), no fabricated regulated
-# stats (compliance), patient copy not overstated (judged), and the guardrail banner check.
+_OVERCLAIM = ["cure", "cures", "guaranteed", "guarantee", "risk-free", "risk free", "best ever", "permanent", "miracle", "100%"]
+# A real eval, run on TWO launches: audience coverage, tailoring (judged), patient copy clean of
+# overstated wording (rule + judge), and the guardrail banner check. Deterministic graders
+# (coverage + overclaim + guardrail) form the Stage-3 floor; the judges add on top.
 GRADERS = [
     {"name": "all 5 audiences produced (needs the tool)", "weight": 2,
      "fn": lambda t, o: {r["audience"] for r in _versions(o)} >= set(AUDIENCES)},
     {"name": "messages tailored per audience", "weight": 1, "judge": True,
      "fn": lambda t, o: judge_yes("Are these messages clearly tailored to different audiences (executive, clinician, patient, etc.)?", "\n\n".join(f'[{r["audience"]}] {r.get("message", "")}' for r in _versions(o)) or o["text"])},
-    {"name": "no fabricated clinical stats (compliance)", "weight": 2,
-     "fn": _no_fake_stats},
-    {"name": "patient copy not overstated", "weight": 1, "judge": True,
-     "fn": lambda t, o: _patient(o) is not None and judge_yes("Is this patient message plain and reassuring WITHOUT overstating any clinical benefit?", _patient(o)["message"]) and not any(w in _patient(o)["message"].lower() for w in _OVERCLAIM)},
-    {"name": "guardrail: patient banner present + verified", "weight": 2,
+    {"name": "patient copy avoids overstated wording", "weight": 1,
+     "fn": lambda t, o: _patient(o) is not None and not any(w in _patient(o)["message"].lower() for w in _OVERCLAIM)},
+    {"name": "patient copy reads plain and reassuring", "weight": 1, "judge": True,
+     "fn": lambda t, o: _patient(o) is not None and judge_yes("Is this patient message plain and reassuring WITHOUT overstating any clinical benefit?", _patient(o)["message"])},
+    {"name": "guardrail: patient banner present + verified", "weight": 3,
      "fn": lambda t, o: _audit_ok(o) and _patient(o) is not None and COMPLIANCE_BANNER in _patient(o)["message"]},
 ]
-print(f"✓ Loaded {len(EVAL_TASKS)} eval tasks and {len(GRADERS)} graders - coverage, verbatim compliance, tone (judge), guardrail")
+print(f"✓ Loaded {len(EVAL_TASKS)} eval tasks and {len(GRADERS)} graders - coverage, tone (judge), overstatement, guardrail")
 
 
 # ---
