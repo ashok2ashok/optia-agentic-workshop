@@ -40,7 +40,7 @@ re-run an eval and watch a progress bar climb from a weak baseline to a working,
 - An **OpenAI or Anthropic API key** (OpenAI: https://platform.openai.com/  ·  Anthropic: https://console.anthropic.com/). Running a full notebook makes
   real API calls and consumes a small amount of credit - a few cents per group with the default models.
 - That's it. Each notebook installs its one dependency (`litellm`) on first run.
-- Pick the model in `.env` with `WORKSHOP_MODEL` (any LiteLLM id). Recommended: `gpt-4o` (OpenAI) or `anthropic/claude-sonnet-5` (Anthropic).
+- Pick the model in `.env` with `WORKSHOP_MODEL` (any LiteLLM id). Recommended: `gpt-4o-mini` (OpenAI, the default) or `anthropic/claude-sonnet-5` (Anthropic).
 
 ## Run it
 1. Install once - see [SETUP.md](SETUP.md) (`python3 -m venv .venv && pip install -r requirements.txt`).

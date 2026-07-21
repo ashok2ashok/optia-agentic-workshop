@@ -107,7 +107,7 @@ if not (_has_openai or _has_anthropic):
 
 # Pick the model. Set WORKSHOP_MODEL in .env to any LiteLLM model id to override
 # (e.g. gpt-4o, gpt-4o-mini, anthropic/claude-sonnet-5, gemini/gemini-1.5-pro).
-MODEL = os.environ.get("WORKSHOP_MODEL", "").strip() or ("gpt-4o" if _has_openai else "anthropic/claude-sonnet-5")
+MODEL = os.environ.get("WORKSHOP_MODEL", "").strip() or ("gpt-4o-mini" if _has_openai else "anthropic/claude-sonnet-5")
 JUDGE_MODEL = os.environ.get("WORKSHOP_JUDGE", "").strip() or ("gpt-4o-mini" if MODEL.startswith(("gpt", "openai")) else "anthropic/claude-haiku-4-5")
 litellm.drop_params = True   # silently ignore params a given provider does not support
 try:
