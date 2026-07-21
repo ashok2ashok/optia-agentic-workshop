@@ -4,14 +4,29 @@ One page to get any laptop - including a locked-down corporate one - running the
 **Fastest reliable path: a virtual environment in VS Code.**
 
 ## The 4-command setup (once)
+
+**macOS / Linux:**
 ```bash
 python3 -m venv .venv                 # isolated environment
-source .venv/bin/activate             # macOS/Linux  (Windows: .venv\Scripts\activate)
+source .venv/bin/activate             # activate it
 pip install -r requirements.txt       # install deps
 cp .env.example .env                  # then paste an OpenAI or Anthropic key into .env (see below)
 ```
+
+**Windows (PowerShell or Command Prompt):**
+```powershell
+python -m venv .venv                  # isolated environment
+.venv\Scripts\activate                # activate it (PowerShell: if blocked, run  Set-ExecutionPolicy -Scope Process RemoteSigned  first, or use .venv\Scripts\activate.bat)
+pip install -r requirements.txt       # install deps
+copy .env.example .env                # then paste an OpenAI or Anthropic key into .env (see below)
+```
+
 Open any group's `.ipynb`, select the `.venv` interpreter as the kernel (top-right), Run All.
 First cell should show `✓ Dependencies ready` then `✓ Connected via LiteLLM - model: ...`.
+
+> **Windows note:** if you skip the venv, the system Python (`C:\Program Files\Python311`) tries a `--user`
+> install into `AppData\Roaming` and litellm can fail with *"Could not install litellm"*. The venv above
+> fixes it - and make sure VS Code's selected kernel is the one ending in `.venv`, not the system Python.
 
 ## API key (OpenAI or Anthropic)
 These notebooks run on either provider through **LiteLLM**. Copy the template and paste ONE key:
