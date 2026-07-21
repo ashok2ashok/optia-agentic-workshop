@@ -11,10 +11,10 @@ pip install -r requirements.txt       # install deps
 cp .env.example .env                  # then paste an OpenAI or Anthropic key into .env (see below)
 ```
 Open any group's `.ipynb`, select the `.venv` interpreter as the kernel (top-right), Run All.
-First cell should show `✓ Dependencies ready` then `✓ Connected - model: ...`. No third-party packages are needed (standard library only), so `pip install` is optional.
+First cell should show `✓ Dependencies ready` then `✓ Connected via LiteLLM - model: ...`.
 
 ## API key (OpenAI or Anthropic)
-These notebooks run on either provider with **no extra packages** (standard-library HTTPS). Copy the template and paste ONE key:
+These notebooks run on either provider through **LiteLLM**. Copy the template and paste ONE key:
 ```bash
 cp .env.example .env
 ```
@@ -22,10 +22,10 @@ Then open `.env` and set one of:
 ```
 OPENAI_API_KEY=sk-...            # OpenAI keys start sk-
 ANTHROPIC_API_KEY=sk-ant-...     # Anthropic keys start sk-ant-
-# Optional: choose the model (any OpenAI or Anthropic id). If unset it picks gpt-4o or anthropic/claude-sonnet-5.
+# Optional: choose the model (any LiteLLM id). If unset it picks gpt-4o or anthropic/claude-sonnet-5.
 WORKSHOP_MODEL=gpt-4o
 ```
-Save and re-run the Setup cell; you want the `✓ Connected - model: ...` banner. One `.env`
+Save and re-run the Setup cell; you want the `✓ Connected via LiteLLM - model: ...` banner. One `.env`
 serves all five groups. Never paste a key into a notebook cell.
 
 **Model choice:** `gpt-4o` or `anthropic/claude-sonnet-5` are the reliable defaults. `gpt-4o-mini` is

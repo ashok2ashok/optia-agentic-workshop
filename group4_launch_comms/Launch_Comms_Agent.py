@@ -52,89 +52,9 @@ def _ensure_packages(reqs):
             return
     raise SystemExit("Could not install " + ", ".join(missing) + " - see SETUP.md (venv path fixes this).")
 
-# No third-party packages needed - the model is called over plain HTTPS with the standard library.
-import json, os, pathlib, time, urllib.request, urllib.error
-
-# --- tiny zero-dependency model client (OpenAI + Anthropic) ---
-class _Fn:
-    def __init__(self, name, arguments): self.name = name; self.arguments = arguments
-class _ToolCall:
-    def __init__(self, id, name, arguments): self.id = id; self.function = _Fn(name, arguments)
-class _Reply:
-    def __init__(self, text, tool_calls): self.text = text; self.tool_calls = tool_calls
-
-def _provider(model):
-    m = model.lower()
-    if m.startswith("anthropic/") or "claude" in m: return "anthropic"
-    if m.startswith("openai/") or m.startswith(("gpt", "o1", "o3", "o4")): return "openai"
-    return "anthropic" if os.environ.get("ANTHROPIC_API_KEY", "").startswith("sk-ant-") else "openai"
-
-def _post(url, headers, payload):
-    req = urllib.request.Request(url, data=json.dumps(payload).encode(),
-                                 headers={**headers, "Content-Type": "application/json"}, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=180) as r:
-            return json.loads(r.read().decode())
-    except urllib.error.HTTPError as e:
-        raise RuntimeError(f"HTTP {e.code}: {e.read().decode()[:400]}")
-
-def _anthropic_tool(t):
-    f = t.get("function", t)
-    return {"name": f["name"], "description": f.get("description", ""),
-            "input_schema": f.get("parameters", {"type": "object", "properties": {}})}
-
-def _to_anthropic(messages):
-    out = []
-    for m in messages:
-        role = m["role"]
-        if role == "tool":
-            block = {"type": "tool_result", "tool_use_id": m["tool_call_id"], "content": m["content"]}
-            if out and out[-1]["role"] == "user" and isinstance(out[-1]["content"], list):
-                out[-1]["content"].append(block)
-            else:
-                out.append({"role": "user", "content": [block]})
-        elif role == "assistant":
-            content = []
-            if m.get("content"): content.append({"type": "text", "text": m["content"]})
-            for tc in m.get("tool_calls", []):
-                content.append({"type": "tool_use", "id": tc["id"], "name": tc["function"]["name"],
-                                "input": json.loads(tc["function"]["arguments"] or "{}")})
-            out.append({"role": "assistant", "content": content or "..."})
-        else:
-            out.append({"role": "user", "content": m["content"]})
-    return out
-
-def model_call(model, messages, tools=None, max_tokens=4000):
-    """One call to the model, provider chosen from the model id / which key is set.
-    Returns an object with .text and .tool_calls (each .id, .function.name, .function.arguments)."""
-    prov = _provider(model)
-    mid = model.split("/", 1)[1] if "/" in model else model
-    if prov == "openai":
-        hdr = {"Authorization": "Bearer " + os.environ.get("OPENAI_API_KEY", "")}
-        payload = {"model": mid, "messages": messages, "max_tokens": max_tokens}
-        if tools: payload["tools"] = tools
-        try:
-            data = _post("https://api.openai.com/v1/chat/completions", hdr, payload)
-        except RuntimeError as e:
-            if "max_tokens" in str(e):   # some newer models want max_completion_tokens
-                payload.pop("max_tokens"); payload["max_completion_tokens"] = max_tokens
-                data = _post("https://api.openai.com/v1/chat/completions", hdr, payload)
-            else:
-                raise
-        msg = data["choices"][0]["message"]
-        tcs = [_ToolCall(tc["id"], tc["function"]["name"], tc["function"]["arguments"]) for tc in (msg.get("tool_calls") or [])]
-        return _Reply(msg.get("content") or "", tcs)
-    else:
-        hdr = {"x-api-key": os.environ.get("ANTHROPIC_API_KEY", ""), "anthropic-version": "2023-06-01"}
-        sys_txt = "\n".join(m["content"] for m in messages if m["role"] == "system")
-        conv = [m for m in messages if m["role"] != "system"]
-        payload = {"model": mid, "max_tokens": max_tokens, "messages": _to_anthropic(conv)}
-        if sys_txt: payload["system"] = sys_txt
-        if tools: payload["tools"] = [_anthropic_tool(t) for t in tools]
-        data = _post("https://api.anthropic.com/v1/messages", hdr, payload)
-        text = "".join(b.get("text", "") for b in data["content"] if b["type"] == "text")
-        tcs = [_ToolCall(b["id"], b["name"], json.dumps(b["input"])) for b in data["content"] if b["type"] == "tool_use"]
-        return _Reply(text, tcs)
+_ensure_packages([("litellm", "litellm")])
+import litellm, json, os, pathlib, time
+import logging; logging.getLogger("LiteLLM").setLevel(logging.ERROR); litellm.suppress_debug_info = True
 print("✓ Dependencies ready")
 
 def _status(ok, msg):
@@ -175,8 +95,8 @@ for _ln in (_env.read_text().splitlines() if _env.exists() else []):
         _k, _v = _ln.split("=", 1)
         _file[_k.strip()] = _v.strip().strip('"').strip("'")
 
-# Put every key from .env into the environment so the right provider is used; a matching
-# shell/kernel key wins. No packages needed - the model is called over plain HTTPS.
+# LiteLLM talks to many providers with one API. Put every key from .env into the environment
+# so it can pick the right one; a matching shell/kernel key wins.
 for _k, _v in _file.items():
     if _v and not os.environ.get(_k):
         os.environ[_k] = _v
@@ -185,16 +105,17 @@ _has_anthropic = os.environ.get("ANTHROPIC_API_KEY", "").startswith("sk-ant-")
 if not (_has_openai or _has_anthropic):
     raise SystemExit(f"No API key yet. Open {_env} and paste OPENAI_API_KEY=sk-... or ANTHROPIC_API_KEY=sk-ant-..., save, re-run.")
 
-# Pick the model. Set WORKSHOP_MODEL in .env to any OpenAI or Anthropic model id to override
-# (e.g. gpt-4o, gpt-4o-mini, anthropic/claude-sonnet-5).
+# Pick the model. Set WORKSHOP_MODEL in .env to any LiteLLM model id to override
+# (e.g. gpt-4o, gpt-4o-mini, anthropic/claude-sonnet-5, gemini/gemini-1.5-pro).
 MODEL = os.environ.get("WORKSHOP_MODEL", "").strip() or ("gpt-4o" if _has_openai else "anthropic/claude-sonnet-5")
 JUDGE_MODEL = os.environ.get("WORKSHOP_JUDGE", "").strip() or ("gpt-4o-mini" if MODEL.startswith(("gpt", "openai")) else "anthropic/claude-haiku-4-5")
+litellm.drop_params = True   # silently ignore params a given provider does not support
 try:
-    model_call(MODEL, [{"role": "user", "content": "ping"}], max_tokens=4)
+    litellm.completion(model=MODEL, max_tokens=4, messages=[{"role": "user", "content": "ping"}])
 except Exception as e:
-    _status(False, f"Could not verify model {MODEL} ({type(e).__name__}: {str(e)[:120]}). Check the key for that provider and the model id, then re-run.")
+    _status(False, f"Could not verify model {MODEL} ({type(e).__name__}). Check the key for that provider and the model id, then re-run.")
     raise SystemExit("Model not reachable.")
-_status(True, f"Connected - model: {MODEL}")
+_status(True, f"Connected via LiteLLM - model: {MODEL}")
 
 
 # ## Step 0 · The data + the agent's tools (provided)
@@ -274,12 +195,17 @@ def run_agent(user_input, system_prompt="", tools=None, tool_functions=None, gua
     messages.append({"role": "user", "content": user_input})
     final_text = ""
     for _ in range(max_turns):
-        resp = model_call(MODEL, messages, tools=tools or None, max_tokens=4000)
-        if resp.tool_calls:
-            messages.append({"role": "assistant", "content": resp.text or "",
+        kwargs = dict(model=MODEL, max_tokens=4000, messages=messages)
+        if tools:
+            kwargs["tools"] = tools
+        resp = litellm.completion(**kwargs)
+        msg = resp.choices[0].message
+        calls = getattr(msg, "tool_calls", None) or []
+        if calls:
+            messages.append({"role": "assistant", "content": msg.content or "",
                              "tool_calls": [{"id": c.id, "type": "function",
-                                             "function": {"name": c.function.name, "arguments": c.function.arguments}} for c in resp.tool_calls]})
-            for c in resp.tool_calls:
+                                             "function": {"name": c.function.name, "arguments": c.function.arguments}} for c in calls]})
+            for c in calls:
                 fn = tool_functions.get(c.function.name)
                 try:
                     args = json.loads(c.function.arguments or "{}")
@@ -288,7 +214,7 @@ def run_agent(user_input, system_prompt="", tools=None, tool_functions=None, gua
                 out = fn(**args) if fn else json.dumps({"error": "unknown tool " + c.function.name})
                 messages.append({"role": "tool", "tool_call_id": c.id, "content": str(out)})
             continue
-        final_text = resp.text or ""
+        final_text = msg.content or ""
         break
     output = {"text": final_text, "records": list(RECORDS)}
     if guardrail:
@@ -382,8 +308,9 @@ def scoreboard():
 
 def judge_yes(question, content):
     """LLM-as-judge grader: ask a cheap model a yes/no question about the output."""
-    r = model_call(JUDGE_MODEL, [{"role": "user", "content": f"{question}\n\n---\n{content}\n---\nAnswer with exactly YES or NO."}], max_tokens=5)
-    return "yes" in (r.text or "").strip().lower()
+    r = litellm.completion(model=JUDGE_MODEL, max_tokens=5,
+        messages=[{"role": "user", "content": f"{question}\n\n---\n{content}\n---\nAnswer with exactly YES or NO."}])
+    return "yes" in (r.choices[0].message.content or "").strip().lower()
 
 def _check(passed, msg):
     _status(passed, msg)

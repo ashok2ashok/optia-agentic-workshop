@@ -3,6 +3,5 @@
 #   pip install -r requirements.txt
 # then select the .venv interpreter as your notebook kernel. See SETUP.md.
 
-# No third-party packages required. The notebooks call the model over plain HTTPS using the
-# Python standard library (urllib), so they run on locked-down machines with no pip access.
-# You only need Python 3.10+.
+# Runs on OpenAI or Anthropic via LiteLLM (one API, many providers).
+litellm>=1.0
