@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Requirement-to-Story Agent - Demo</title>
+<style>
+  :root{--primary:#003595;--deep:#063497;--navy:#003D5C;--mid:#5B7EBC;--tint:#ECF0F7;--tint2:#F4F8F9;--ink:#1A2B33;--slate:#5A6B72;--line:#E2E8F0;--amber:#B26B00;--amberBg:#FBEEDA;--green:#2E7D5B;--greenBg:#E6F1EB;--red:#C0392B;--redBg:#FBEAE8;--shadow:0 4px 20px rgba(0,53,149,0.08);}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:linear-gradient(160deg,#EEF3FB,#F7FAFD);color:var(--ink);min-height:100vh;}
+  .topbar{background:linear-gradient(120deg,var(--deep),var(--primary));color:#fff;padding:22px 40px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow);}
+  .brand{display:flex;align-items:center;gap:14px;}
+  .logo{width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:22px;}
+  .topbar h1{font-size:19px;font-weight:700;}.topbar .sub{font-size:12px;color:#C7D6DC;margin-top:2px;}
+  .badge-demo{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 40px 60px;}
+  .intro h2{font-size:24px;color:var(--navy);font-weight:700;margin-bottom:6px;}
+  .intro p{color:var(--slate);font-size:14px;line-height:1.5;margin-bottom:22px;}
+  .panel{background:#fff;border-radius:18px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:22px;}
+  .panel-head{padding:18px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;}
+  .panel-head h3{font-size:16px;color:var(--navy);font-weight:700;}.panel-head .hint{font-size:12px;color:var(--slate);}
+  .panel-body{padding:24px;}
+  textarea{width:100%;min-height:120px;border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;font-family:inherit;font-size:13.5px;line-height:1.55;color:var(--ink);resize:vertical;background:var(--tint2);}
+  textarea:focus{outline:none;border-color:var(--primary);background:#fff;}
+  .btn{background:var(--primary);color:#fff;border:none;padding:12px 26px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:.2s;display:inline-flex;align-items:center;gap:8px;box-shadow:0 3px 10px rgba(0,53,149,.2);}
+  .btn:hover{background:var(--deep);transform:translateY(-1px);}.btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn.ghost{background:#fff;color:var(--primary);border:1.5px solid var(--primary);box-shadow:none;}
+  .controls{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;}
+  .spinner{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .stagelog{font-size:12px;color:var(--slate);margin-top:12px;font-style:italic;min-height:18px;}
+  .results{display:none;}.results.on{display:block;animation:fade .5s;}
+  @keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;}}
+  .story{background:var(--tint2);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:14px;border-left:4px solid var(--primary);animation:fade .4s;}
+  .story .id{font-size:10px;color:var(--mid);font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+  .story .title{font-size:15px;font-weight:700;color:var(--navy);margin:5px 0 10px;line-height:1.4;}
+  .story .ac-label{font-size:11px;font-weight:700;color:var(--slate);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+  .story ul{list-style:none;padding:0;}
+  .story ul li{font-size:12.5px;padding:5px 0 5px 24px;position:relative;color:var(--ink);}
+  .story ul li:before{content:"\2713";position:absolute;left:0;color:var(--green);font-weight:700;}
+  .story .pts{display:inline-block;margin-top:8px;background:var(--tint);color:var(--primary);font-size:11px;font-weight:700;padding:3px 12px;border-radius:12px;}
+  .assume{background:linear-gradient(120deg,#FDF6E9,#FBEEDA);border:1.5px solid var(--amber);border-radius:14px;padding:18px 22px;margin-top:6px;}
+  .assume h4{color:var(--amber);font-size:14px;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+  .assume ul{list-style:none;padding:0;}
+  .assume li{font-size:12.5px;padding:6px 0 6px 26px;position:relative;color:var(--ink);}
+  .assume li:before{content:"?";position:absolute;left:0;width:16px;height:16px;background:var(--amber);color:#fff;border-radius:50%;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;top:6px;}
+  .flow{display:flex;gap:8px;flex-wrap:wrap;}
+  .flow .node{background:var(--tint);border-radius:8px;padding:7px 13px;font-size:11px;color:var(--navy);font-weight:600;}
+  .flow .arrow{color:var(--mid);font-weight:700;align-self:center;}
+  .summary-box{background:var(--tint);border-radius:12px;padding:16px 20px;font-size:13px;line-height:1.55;margin-top:14px;}
+  .summary-box b{color:var(--primary);}
+  .footer-note{text-align:center;font-size:11px;color:var(--slate);margin-top:20px;}
+  .chip{display:inline-block;font-size:11px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 12px;margin:0 6px 6px 0;cursor:pointer;color:var(--slate);}
+  .chip:hover{border-color:var(--primary);color:var(--primary);}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand"><div class="logo">&#128221;</div><div><h1>Requirement-to-Story Agent</h1><div class="sub">Digital Health &middot; Product Delivery</div></div></div>
+    <div class="badge-demo">FACILITATOR DEMO</div>
+  </div>
+  <div class="wrap">
+    <div class="intro">
+      <h2>Turn a messy request into clean, ready-to-build stories</h2>
+      <p>Paste a run-on stakeholder request. The agent decomposes it into well-formed user stories with acceptance criteria, and separates what was actually asked from what it had to assume, so scope never creeps in silently.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>How this agent thinks</h3><span class="hint">The assumptions gate is the safeguard</span></div>
+      <div class="panel-body">
+        <div class="flow">
+          <div class="node">&#128229; Read the request</div><span class="arrow">&rsaquo;</span>
+          <div class="node">&#9986;&#65039; Decompose into units of value</div><span class="arrow">&rsaquo;</span>
+          <div class="node">&#128221; Draft stories + acceptance criteria</div><span class="arrow">&rsaquo;</span>
+          <div class="node">&#10071; Separate facts from assumptions</div><span class="arrow">&rsaquo;</span>
+          <div class="node">&#128100; Product owner confirms</div>
+        </div>
+        <div class="summary-box"><b>Guardrail:</b> the agent never silently adds scope. Anything it inferred goes into a visible "Assumptions to confirm" list for a human to accept or reject. This is how you prevent confident, invented requirements.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>The stakeholder request</h3><span class="hint">Edit it, or try an example</span></div>
+      <div class="panel-body">
+        <textarea id="req">so clinics keep calling because reordering supplies is a pain, they never know what they ordered last time or whats even in stock and half the time the rep has to do it for them over email, can we just make it so they can reorder easily maybe see past orders and get told when somethings running low, oh and it should work on their phone because the front desk doesnt always have a computer free</textarea>
+        <div style="margin-top:10px;">
+          <span class="chip" onclick="setExample(0)">Reorder example</span>
+          <span class="chip" onclick="setExample(1)">Patient onboarding example</span>
+        </div>
+        <div class="controls">
+          <button class="btn" id="runBtn" onclick="run()"><span id="btnLabel">&#9654; Generate stories</span></button>
+          <button class="btn ghost" onclick="reset()">Reset</button>
+        </div>
+        <div class="stagelog" id="stagelog"></div>
+      </div>
+    </div>
+
+    <div class="panel results" id="results">
+      <div class="panel-head"><h3>Generated user stories</h3><span class="hint">Ready for backlog review</span></div>
+      <div class="panel-body">
+        <div id="stories"></div>
+        <div id="assumptions"></div>
+        <div class="summary-box" id="sum"></div>
+      </div>
+    </div>
+    <div class="footer-note">Demonstration built on illustrative data. The AI Frontier Workshop &middot; Deloitte University.</div>
+  </div>
+
+<script>
+const examples=[
+ "so clinics keep calling because reordering supplies is a pain, they never know what they ordered last time or whats even in stock and half the time the rep has to do it for them over email, can we just make it so they can reorder easily maybe see past orders and get told when somethings running low, oh and it should work on their phone because the front desk doesnt always have a computer free",
+ "new patients get so confused before their first visit, they dont know what to bring or fill out, staff spends forever on the phone explaining, can we send them something ahead of time that walks them through it, collects their forms digitally and reminds them, needs to handle people who dont speak english too"
+];
+const results={
+ 0:{stories:[
+   {t:"As a clinic staff member, I want to reorder from my past orders, so that I can restock without rebuilding an order from scratch.",ac:["Past orders are listed with date, items, and quantities","I can reorder a previous order in one action","I can edit quantities before submitting"],pts:5},
+   {t:"As a clinic staff member, I want to see current stock levels, so that I know what actually needs reordering.",ac:["Each item shows current on-hand quantity","Low-stock items are visually flagged"],pts:3},
+   {t:"As a clinic staff member, I want low-stock alerts, so that I reorder before I run out.",ac:["I receive an alert when an item crosses its threshold","I can act on the alert directly from the notification"],pts:5},
+   {t:"As a clinic staff member, I want to reorder from my phone, so that I'm not blocked when no computer is free.",ac:["Core reorder flow works on a mobile screen","Layout is usable one-handed at the front desk"],pts:3},
+ ],assume:[
+   "\"Running low\" threshold is not defined - who sets it, per item or global?",
+   "Whether reps should retain the ability to order on a clinic's behalf, or this fully replaces that",
+   "Scope of \"in stock\" - the clinic's own inventory, or Alcon's availability, or both",
+ ]},
+ 1:{stories:[
+   {t:"As a new patient, I want a pre-visit guide, so that I know what to bring and expect.",ac:["Guide is sent automatically after booking","Content covers documents, arrival, and what to expect"],pts:3},
+   {t:"As a new patient, I want to complete intake forms digitally beforehand, so that I don't fill them out in the waiting room.",ac:["Forms are completable on any device","Completed data is available to staff before the visit"],pts:5},
+   {t:"As a new patient, I want reminders before my visit, so that I arrive prepared and on time.",ac:["Reminder sent on a configurable schedule","Reminder links back to the guide and forms"],pts:3},
+   {t:"As a non-English-speaking patient, I want the guide and forms in my language, so that I can complete them accurately.",ac:["Guide and forms available in supported languages","Language preference is captured and remembered"],pts:8},
+ ],assume:[
+   "Which languages must be supported at launch",
+   "Whether digital intake must integrate with the existing clinical system now or later",
+   "Whether reminders go via SMS, email, or both",
+ ]}
+};
+let current=0;
+function setExample(i){current=i;document.getElementById('req').value=examples[i];reset();}
+
+function run(){
+  const btn=document.getElementById('runBtn');btn.disabled=true;
+  document.getElementById('btnLabel').innerHTML='<span class="spinner"></span> Working';
+  const log=document.getElementById('stagelog');
+  const stages=["Reading the request...","Decomposing into units of value...","Drafting stories and acceptance criteria...","Separating what was asked from what was assumed..."];
+  let s=0;const iv=setInterval(()=>{if(s<stages.length){log.textContent=stages[s];s++;}else{clearInterval(iv);show();}},700);
+}
+function show(){
+  const r=results[current];
+  const sc=document.getElementById('stories');sc.innerHTML='';
+  r.stories.forEach((st,i)=>{
+    setTimeout(()=>{
+    sc.insertAdjacentHTML('beforeend',`<div class="story"><div class="id">Story ${i+1}</div><div class="title">${st.t}</div><div class="ac-label">Acceptance criteria</div><ul>${st.ac.map(a=>`<li>${a}</li>`).join('')}</ul><span class="pts">${st.pts} points</span></div>`);
+    },i*180);
+  });
+  setTimeout(()=>{
+    document.getElementById('assumptions').innerHTML=`<div class="assume"><h4>&#10071; Assumptions to confirm <span style="font-weight:400;font-size:12px;color:var(--slate);">(the agent did not invent scope - it flagged these for you)</span></h4><ul>${r.assume.map(a=>`<li>${a}</li>`).join('')}</ul></div>`;
+    document.getElementById('sum').innerHTML=`<b>Result:</b> one messy request became ${r.stories.length} well-formed stories with acceptance criteria, plus ${r.assume.length} open assumptions surfaced for a product owner to resolve. Nothing was added to scope without a human's sign-off.`;
+    document.getElementById('results').classList.add('on');
+    document.getElementById('btnLabel').innerHTML='&#10003; Stories generated';
+    document.getElementById('results').scrollIntoView({behavior:'smooth'});
+  }, r.stories.length*180+200);
+}
+function reset(){
+  document.getElementById('results').classList.remove('on');
+  document.getElementById('stagelog').textContent='';
+  document.getElementById('runBtn').disabled=false;
+  document.getElementById('btnLabel').innerHTML='&#9654; Generate stories';
+}
+</script>
+</body>
+</html>

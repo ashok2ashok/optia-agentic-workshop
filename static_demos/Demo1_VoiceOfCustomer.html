@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice-of-Customer Agent - Demo</title>
+<style>
+  :root{
+    --primary:#003595; --deep:#063497; --navy:#003D5C; --mid:#5B7EBC;
+    --tint:#ECF0F7; --tint2:#F4F8F9; --ink:#1A2B33; --slate:#5A6B72;
+    --line:#E2E8F0; --amber:#B26B00; --amberBg:#FBEEDA; --green:#2E7D5B;
+    --greenBg:#E6F1EB; --red:#C0392B; --redBg:#FBEAE8; --white:#fff;
+    --shadow:0 4px 20px rgba(0,53,149,0.08); --shadow2:0 8px 40px rgba(0,53,149,0.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:linear-gradient(160deg,#EEF3FB 0%,#F7FAFD 100%);color:var(--ink);min-height:100vh;padding:0;}
+  .topbar{background:linear-gradient(120deg,var(--deep),var(--primary));color:#fff;padding:22px 40px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow);}
+  .topbar .brand{display:flex;align-items:center;gap:14px;}
+  .logo{width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:22px;}
+  .topbar h1{font-size:19px;font-weight:700;letter-spacing:-.2px;}
+  .topbar .sub{font-size:12px;color:#C7D6DC;margin-top:2px;}
+  .badge-demo{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.5px;}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 40px 60px;}
+  .intro{display:flex;gap:20px;align-items:center;margin-bottom:24px;flex-wrap:wrap;}
+  .intro .txt{flex:1;min-width:320px;}
+  .intro h2{font-size:24px;color:var(--navy);font-weight:700;margin-bottom:6px;}
+  .intro p{color:var(--slate);font-size:14px;line-height:1.5;}
+  .kpis{display:flex;gap:12px;}
+  .kpi{background:#fff;border-radius:14px;padding:14px 18px;box-shadow:var(--shadow);text-align:center;min-width:96px;}
+  .kpi .num{font-size:26px;font-weight:800;color:var(--primary);line-height:1;}
+  .kpi .lbl{font-size:10px;color:var(--slate);text-transform:uppercase;letter-spacing:.5px;margin-top:5px;}
+  .panel{background:#fff;border-radius:18px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:22px;}
+  .panel-head{padding:18px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;}
+  .panel-head h3{font-size:16px;color:var(--navy);font-weight:700;}
+  .panel-head .hint{font-size:12px;color:var(--slate);}
+  .panel-body{padding:24px;}
+  .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+  .btn{background:var(--primary);color:#fff;border:none;padding:12px 26px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:.2s;display:inline-flex;align-items:center;gap:8px;box-shadow:0 3px 10px rgba(0,53,149,.2);}
+  .btn:hover{background:var(--deep);transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,53,149,.28);}
+  .btn:active{transform:translateY(0);}
+  .btn.ghost{background:#fff;color:var(--primary);border:1.5px solid var(--primary);box-shadow:none;}
+  .btn.ghost:hover{background:var(--tint);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+  .feedgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
+  .fbcard{background:var(--tint2);border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-size:12.5px;line-height:1.45;position:relative;transition:.25s;}
+  .fbcard .src{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--mid);font-weight:700;margin-bottom:4px;}
+  .fbcard.tagged{border-color:var(--primary);box-shadow:0 2px 8px rgba(0,53,149,.1);}
+  .fbcard .theme-tag{display:inline-block;margin-top:7px;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;}
+  .spinner{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .progress{height:5px;background:var(--tint);border-radius:3px;overflow:hidden;margin:16px 0 4px;display:none;}
+  .progress.on{display:block;}
+  .progress .bar{height:100%;background:linear-gradient(90deg,var(--primary),var(--mid));width:0;transition:width .3s;}
+  .stagelog{font-size:12px;color:var(--slate);margin-top:8px;min-height:18px;font-style:italic;}
+  .results{display:none;}
+  .results.on{display:block;animation:fade .5s;}
+  @keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  .theme-row{display:flex;align-items:center;gap:14px;padding:15px 18px;border-radius:12px;margin-bottom:10px;background:var(--tint2);border-left:4px solid var(--mid);}
+  .theme-row .rank{width:30px;height:30px;border-radius:8px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;}
+  .theme-row .info{flex:1;}
+  .theme-row .tname{font-weight:700;font-size:14px;color:var(--navy);}
+  .theme-row .tmeta{font-size:11.5px;color:var(--slate);margin-top:2px;}
+  .theme-row .count{font-size:22px;font-weight:800;color:var(--primary);}
+  .urg{font-size:10px;padding:3px 10px;border-radius:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+  .urg.high{background:var(--redBg);color:var(--red);}
+  .urg.med{background:var(--amberBg);color:var(--amber);}
+  .urg.low{background:var(--greenBg);color:var(--green);}
+  .alert{background:linear-gradient(120deg,#FDF0EF,#FBEAE8);border:1.5px solid var(--red);border-radius:14px;padding:18px 22px;margin-bottom:16px;display:flex;gap:16px;align-items:flex-start;}
+  .alert .icon{font-size:26px;}
+  .alert h4{color:var(--red);font-size:15px;margin-bottom:4px;}
+  .alert p{font-size:13px;color:var(--ink);line-height:1.5;}
+  .alert .quote{background:#fff;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:12.5px;font-style:italic;color:var(--slate);border-left:3px solid var(--red);}
+  .flag-hitl{display:inline-block;margin-top:8px;background:var(--red);color:#fff;font-size:10px;padding:4px 12px;border-radius:12px;font-weight:700;letter-spacing:.4px;}
+  .confidence{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--slate);margin-left:auto;}
+  .conf-dot{width:7px;height:7px;border-radius:50%;}
+  .summary-box{background:var(--tint);border-radius:12px;padding:16px 20px;margin-top:14px;font-size:13px;line-height:1.55;}
+  .summary-box b{color:var(--primary);}
+  .footer-note{text-align:center;font-size:11px;color:var(--slate);margin-top:20px;}
+  .flow{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  .flow .node{background:var(--tint);border-radius:8px;padding:7px 13px;font-size:11px;color:var(--navy);font-weight:600;display:flex;align-items:center;gap:6px;}
+  .flow .arrow{color:var(--mid);font-weight:700;align-self:center;}
+  .tabs{display:flex;gap:6px;margin-bottom:0;}
+  .tab{padding:9px 16px;font-size:12.5px;font-weight:600;color:var(--slate);cursor:pointer;border-radius:8px 8px 0 0;}
+  .tab.active{background:#fff;color:var(--primary);box-shadow:0 -2px 8px rgba(0,53,149,.06);}
+  @media(max-width:760px){.feedgrid{grid-template-columns:1fr;}.wrap{padding:20px;}}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">&#128172;</div>
+      <div>
+        <h1>Voice-of-Customer Agent</h1>
+        <div class="sub">Digital Health &middot; Product Intelligence</div>
+      </div>
+    </div>
+    <div class="badge-demo">FACILITATOR DEMO</div>
+  </div>
+
+  <div class="wrap">
+    <div class="intro">
+      <div class="txt">
+        <h2>Turn scattered feedback into a ranked action list</h2>
+        <p>This agent ingests raw customer feedback from every channel, groups it into themes, scores each by urgency and frequency, and surfaces anything that needs a human's eyes, before it becomes a problem.</p>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="num" id="k-total">12</div><div class="lbl">Comments</div></div>
+        <div class="kpi"><div class="num" id="k-themes">-</div><div class="lbl">Themes</div></div>
+        <div class="kpi"><div class="num" id="k-flags">-</div><div class="lbl">Flagged</div></div>
+      </div>
+    </div>
+
+    <!-- how it thinks -->
+    <div class="panel">
+      <div class="panel-head"><h3>How this agent thinks</h3><span class="hint">A simple, inspectable loop</span></div>
+      <div class="panel-body">
+        <div class="flow">
+          <div class="node">&#128229; Ingest feedback</div><span class="arrow">&rsaquo;</span>
+          <div class="node">&#129504; Cluster into themes</div><span class="arrow">&rsaquo;</span>
+          <div class="node">&#9878;&#65039; Score urgency &amp; frequency</div><span class="arrow">&rsaquo;</span>
+          <div class="node">&#128680; Flag safety for review</div><span class="arrow">&rsaquo;</span>
+          <div class="node">&#128203; Summarize for the team</div>
+        </div>
+        <div class="summary-box" style="margin-top:16px;">
+          <b>AI vs. rules:</b> clustering and urgency judgment use AI (language understanding). The safety keyword net and the human-review gate are deterministic rules. <b>Guardrail:</b> anything touching clinical or safety language is always escalated to a person, never auto-resolved.
+        </div>
+      </div>
+    </div>
+
+    <!-- input -->
+    <div class="panel">
+      <div class="panel-head"><h3>Incoming feedback</h3><span class="hint">12 comments from app reviews, tickets, and surveys</span></div>
+      <div class="panel-body">
+        <div class="feedgrid" id="feedgrid"></div>
+        <div class="progress" id="progress"><div class="bar" id="bar"></div></div>
+        <div class="stagelog" id="stagelog"></div>
+        <div class="controls" style="margin-top:18px;">
+          <button class="btn" id="runBtn" onclick="runAgent()"><span id="btnLabel">&#9654; Run analysis</span></button>
+          <button class="btn ghost" onclick="resetDemo()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- results -->
+    <div class="panel results" id="results">
+      <div class="panel-head"><h3>What the team should pay attention to</h3><span class="hint">Ranked by urgency, then volume</span></div>
+      <div class="panel-body">
+        <div id="alertZone"></div>
+        <div id="themeList"></div>
+        <div class="summary-box" id="execSummary"></div>
+      </div>
+    </div>
+
+    <div class="footer-note">Demonstration built on illustrative, non-production data. The AI Frontier Workshop &middot; Deloitte University.</div>
+  </div>
+
+<script>
+const feedback = [
+  {src:"App Review", text:"The new scheduling screen is so much faster. Booked my follow-up in under a minute.", theme:"Scheduling experience", urg:"low"},
+  {src:"Support Ticket", text:"After the update my appointment reminders stopped arriving. Missed a pre-op call because of it.", theme:"Notifications & reminders", urg:"high", safety:true, safetyReason:"A missed pre-op communication can affect clinical readiness."},
+  {src:"Survey", text:"Love being able to see my surgeon's notes in plain language. Really reassuring.", theme:"Patient education", urg:"low"},
+  {src:"App Review", text:"Reminders come at 3am my time. The timezone handling is broken.", theme:"Notifications & reminders", urg:"med"},
+  {src:"Support Ticket", text:"Could not upload my insurance card, the button does nothing on my phone.", theme:"Upload & forms", urg:"med"},
+  {src:"Survey", text:"The reschedule flow logged me out twice and I lost my slot.", theme:"Scheduling experience", urg:"high"},
+  {src:"App Review", text:"Wish I could add a family member to help manage my appointments.", theme:"Account & access", urg:"low"},
+  {src:"Support Ticket", text:"The dosage info on the recovery page looked wrong compared to my printed sheet. Please check.", theme:"Patient education", urg:"high", safety:true, safetyReason:"A discrepancy in dosage guidance is a potential patient-safety issue."},
+  {src:"Survey", text:"Forms are long and repeat questions I already answered at the clinic.", theme:"Upload & forms", urg:"med"},
+  {src:"App Review", text:"Clean design, easy to find what I need. Nice work.", theme:"Scheduling experience", urg:"low"},
+  {src:"Support Ticket", text:"Password reset email never arrives, tried four times.", theme:"Account & access", urg:"med"},
+  {src:"Survey", text:"The reminder helped me prep correctly for surgery day. Thank you.", theme:"Notifications & reminders", urg:"low"},
+];
+
+function renderFeed(){
+  const g=document.getElementById('feedgrid'); g.innerHTML='';
+  feedback.forEach((f,i)=>{
+    const d=document.createElement('div');
+    d.className='fbcard'; d.id='fb'+i;
+    d.innerHTML=`<div class="src">${f.src}</div>${f.text}`;
+    g.appendChild(d);
+  });
+  document.getElementById('k-total').textContent=feedback.length;
+}
+renderFeed();
+
+const urgOrder={high:0,med:1,low:2};
+const urgLabel={high:"High",med:"Medium",low:"Low"};
+
+function runAgent(){
+  const btn=document.getElementById('runBtn'); btn.disabled=true;
+  document.getElementById('btnLabel').innerHTML='<span class="spinner"></span> Analyzing';
+  const prog=document.getElementById('progress'); prog.classList.add('on');
+  const bar=document.getElementById('bar'); const log=document.getElementById('stagelog');
+  const stages=[
+    [15,"Ingesting 12 comments from 3 channels..."],
+    [38,"Clustering by topic using language understanding..."],
+    [60,"Scoring urgency and frequency..."],
+    [82,"Running safety keyword net..."],
+    [100,"Composing the team summary..."],
+  ];
+  let s=0;
+  const iv=setInterval(()=>{
+    if(s<stages.length){bar.style.width=stages[s][0]+'%';log.textContent=stages[s][1];
+      // tag cards progressively during clustering
+      if(s===1){feedback.forEach((f,i)=>{const c=document.getElementById('fb'+i);
+        setTimeout(()=>{c.classList.add('tagged');
+          const col=f.urg==='high'?'var(--red)':f.urg==='med'?'var(--amber)':'var(--green)';
+          c.insertAdjacentHTML('beforeend',`<div class="theme-tag" style="background:${f.urg==='high'?'var(--redBg)':f.urg==='med'?'var(--amberBg)':'var(--greenBg)'};color:${col};">${f.theme}</div>`);
+        }, i*70);
+      });}
+      s++;
+    } else {clearInterval(iv);setTimeout(showResults,400);}
+  },650);
+}
+
+function showResults(){
+  // aggregate themes
+  const map={};
+  feedback.forEach(f=>{
+    if(!map[f.theme])map[f.theme]={name:f.theme,count:0,worst:'low',safety:false,samples:[]};
+    map[f.theme].count++;
+    if(urgOrder[f.urg]<urgOrder[map[f.theme].worst])map[f.theme].worst=f.urg;
+    if(f.safety){map[f.theme].safety=true;map[f.theme].safetyReason=f.safetyReason;map[f.theme].safetyQuote=f.text;}
+    map[f.theme].samples.push(f.text);
+  });
+  const themes=Object.values(map).sort((a,b)=>urgOrder[a.worst]-urgOrder[b.worst]||b.count-a.count);
+
+  // safety alerts first
+  const safetyItems=feedback.filter(f=>f.safety);
+  const az=document.getElementById('alertZone'); az.innerHTML='';
+  safetyItems.forEach(si=>{
+    az.insertAdjacentHTML('beforeend',`
+     <div class="alert">
+       <div class="icon">&#128680;</div>
+       <div>
+         <h4>Needs human review - possible safety signal</h4>
+         <p>${si.safetyReason} The agent will not resolve this automatically.</p>
+         <div class="quote">&ldquo;${si.text}&rdquo; <span style="color:var(--mid);">- ${si.src}</span></div>
+         <span class="flag-hitl">ROUTED TO A PERSON</span>
+       </div>
+     </div>`);
+  });
+
+  // theme list
+  const tl=document.getElementById('themeList'); tl.innerHTML='';
+  themes.forEach((t,i)=>{
+    const conf = t.count>=3?["High","var(--green)"]:t.count===2?["Medium","var(--amber)"]:["Low","var(--slate)"];
+    tl.insertAdjacentHTML('beforeend',`
+     <div class="theme-row" style="border-left-color:${t.worst==='high'?'var(--red)':t.worst==='med'?'var(--amber)':'var(--green)'}">
+       <div class="rank">${i+1}</div>
+       <div class="info">
+         <div class="tname">${t.name} ${t.safety?'<span title="contains a safety signal">&#128680;</span>':''}</div>
+         <div class="tmeta">${t.count} comment${t.count>1?'s':''} &middot; highest urgency: ${urgLabel[t.worst]}</div>
+       </div>
+       <span class="urg ${t.worst}">${urgLabel[t.worst]}</span>
+       <div class="count">${t.count}</div>
+       <span class="confidence"><span class="conf-dot" style="background:${conf[1]}"></span>${conf[0]} confidence</span>
+     </div>`);
+  });
+
+  document.getElementById('k-themes').textContent=themes.length;
+  document.getElementById('k-flags').textContent=safetyItems.length;
+
+  const top=themes[0];
+  document.getElementById('execSummary').innerHTML=`
+    <b>Summary for the product team:</b> ${feedback.length} comments resolved into ${themes.length} themes.
+    ${safetyItems.length} item${safetyItems.length>1?'s':''} contained a possible safety signal and ${safetyItems.length>1?'were':'was'} routed to a person for review.
+    The most pressing theme is <b>${top.name}</b> (${top.count} comments, ${urgLabel[top.worst].toLowerCase()} urgency).
+    Recommended next step: triage the flagged safety item today, then prioritize ${top.name.toLowerCase()} in the next sprint.`;
+
+  document.getElementById('results').classList.add('on');
+  document.getElementById('btnLabel').innerHTML='&#10003; Analysis complete';
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function resetDemo(){
+  document.getElementById('results').classList.remove('on');
+  document.getElementById('progress').classList.remove('on');
+  document.getElementById('bar').style.width='0';
+  document.getElementById('stagelog').textContent='';
+  document.getElementById('runBtn').disabled=false;
+  document.getElementById('btnLabel').innerHTML='&#9654; Run analysis';
+  document.getElementById('k-themes').textContent='-';
+  document.getElementById('k-flags').textContent='-';
+  renderFeed();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
