@@ -3,4 +3,5 @@
 #   pip install -r requirements.txt
 # then select the .venv interpreter as your notebook kernel. See SETUP.md.
 
-anthropic>=0.69
+# Runs on OpenAI or Anthropic via LiteLLM (one API, many providers).
+litellm>=1.0

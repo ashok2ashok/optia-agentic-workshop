@@ -52,8 +52,9 @@ def _ensure_packages(reqs):
             return
     raise SystemExit("Could not install " + ", ".join(missing) + " - see SETUP.md (venv path fixes this).")
 
-_ensure_packages([("anthropic", "anthropic")])
-import anthropic, json, os, pathlib, time
+_ensure_packages([("litellm", "litellm")])
+import litellm, json, os, pathlib, time
+import logging; logging.getLogger("LiteLLM").setLevel(logging.ERROR); litellm.suppress_debug_info = True
 print("✓ Dependencies ready")
 
 def _status(ok, msg):
@@ -94,33 +95,27 @@ for _ln in (_env.read_text().splitlines() if _env.exists() else []):
         _k, _v = _ln.split("=", 1)
         _file[_k.strip()] = _v.strip().strip('"').strip("'")
 
-# NOTE: a shell/kernel ANTHROPIC_API_KEY OVERRIDES the .env file. If a stale key is exported
-# in your environment, editing .env has no effect until you unset it.
-_shell = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-_filek = _file.get("ANTHROPIC_API_KEY", "").strip()
-if _shell.startswith("sk-ant-"):
-    api_key, _key_source = _shell, "your shell/kernel environment (ANTHROPIC_API_KEY)"
-else:
-    api_key, _key_source = _filek, f"the .env file ({_env})"
-if not api_key.startswith("sk-ant-"):
-    raise SystemExit(f"No API key yet. Open {_env}, paste your key after ANTHROPIC_API_KEY= (starts with sk-ant-), save, re-run.")
+# LiteLLM talks to many providers with one API. Put every key from .env into the environment
+# so it can pick the right one; a matching shell/kernel key wins.
+for _k, _v in _file.items():
+    if _v and not os.environ.get(_k):
+        os.environ[_k] = _v
+_has_openai = os.environ.get("OPENAI_API_KEY", "").startswith("sk-")
+_has_anthropic = os.environ.get("ANTHROPIC_API_KEY", "").startswith("sk-ant-")
+if not (_has_openai or _has_anthropic):
+    raise SystemExit(f"No API key yet. Open {_env} and paste OPENAI_API_KEY=sk-... or ANTHROPIC_API_KEY=sk-ant-..., save, re-run.")
 
-client = anthropic.Anthropic(api_key=api_key, timeout=60.0, max_retries=2)
+# Pick the model. Set WORKSHOP_MODEL in .env to any LiteLLM model id to override
+# (e.g. gpt-4o, gpt-4o-mini, anthropic/claude-sonnet-5, gemini/gemini-1.5-pro).
+MODEL = os.environ.get("WORKSHOP_MODEL", "").strip() or ("gpt-4o" if _has_openai else "anthropic/claude-sonnet-5")
+JUDGE_MODEL = os.environ.get("WORKSHOP_JUDGE", "").strip() or ("gpt-4o-mini" if MODEL.startswith(("gpt", "openai")) else "anthropic/claude-haiku-4-5")
+litellm.drop_params = True   # silently ignore params a given provider does not support
 try:
-    client.messages.create(model="claude-haiku-4-5", max_tokens=1, messages=[{"role": "user", "content": "ping"}])
-except anthropic.AuthenticationError:
-    _status(False, f"Key rejected (using {_key_source}, ending …{api_key[-4:]}). "
-                   "A shell/kernel ANTHROPIC_API_KEY OVERRIDES .env - if that's the wrong key, unset it "
-                   "(or fix it); otherwise paste a valid key into .env and re-run.")
-    raise SystemExit("API key not accepted.")
+    litellm.completion(model=MODEL, max_tokens=4, messages=[{"role": "user", "content": "ping"}])
 except Exception as e:
-    _status(False, f"Could not reach the model API ({type(e).__name__}). Check your connection and re-run.")
-    raise
-os.environ["ANTHROPIC_API_KEY"] = api_key
-_status(True, "API key verified - you're connected.")
-
-MODEL = "claude-sonnet-5"        # the model that powers the agent
-JUDGE_MODEL = "claude-haiku-4-5" # a cheaper/faster model used only as an automatic eval judge
+    _status(False, f"Could not verify model {MODEL} ({type(e).__name__}). Check the key for that provider and the model id, then re-run.")
+    raise SystemExit("Model not reachable.")
+_status(True, f"Connected via LiteLLM - model: {MODEL}")
 
 
 # ## Step 0 · The data + the agent's tools (provided)
@@ -186,25 +181,32 @@ def run_agent(user_input, system_prompt="", tools=None, tool_functions=None, gua
     RECORDS.clear()
     tools = tools or []
     tool_functions = tool_functions or {}
-    messages = [{"role": "user", "content": user_input}]
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": user_input})
     final_text = ""
     for _ in range(max_turns):
-        kwargs = dict(model=MODEL, max_tokens=4000,
-                      system=system_prompt or "You are a helpful assistant.", messages=messages)
+        kwargs = dict(model=MODEL, max_tokens=4000, messages=messages)
         if tools:
             kwargs["tools"] = tools
-        resp = client.messages.create(**kwargs)
-        if resp.stop_reason == "tool_use":
-            results = []
-            for b in resp.content:
-                if b.type == "tool_use":
-                    fn = tool_functions.get(b.name)
-                    out = fn(**b.input) if fn else json.dumps({"error": "unknown tool " + b.name})
-                    results.append({"type": "tool_result", "tool_use_id": b.id, "content": str(out)})
-            messages.append({"role": "assistant", "content": resp.content})
-            messages.append({"role": "user", "content": results})
+        resp = litellm.completion(**kwargs)
+        msg = resp.choices[0].message
+        calls = getattr(msg, "tool_calls", None) or []
+        if calls:
+            messages.append({"role": "assistant", "content": msg.content or "",
+                             "tool_calls": [{"id": c.id, "type": "function",
+                                             "function": {"name": c.function.name, "arguments": c.function.arguments}} for c in calls]})
+            for c in calls:
+                fn = tool_functions.get(c.function.name)
+                try:
+                    args = json.loads(c.function.arguments or "{}")
+                except Exception:
+                    args = {}
+                out = fn(**args) if fn else json.dumps({"error": "unknown tool " + c.function.name})
+                messages.append({"role": "tool", "tool_call_id": c.id, "content": str(out)})
             continue
-        final_text = "".join(b.text for b in resp.content if b.type == "text")
+        final_text = msg.content or ""
         break
     output = {"text": final_text, "records": list(RECORDS)}
     if guardrail:
@@ -298,9 +300,9 @@ def scoreboard():
 
 def judge_yes(question, content):
     """LLM-as-judge grader: ask a cheap model a yes/no question about the output."""
-    r = client.messages.create(model=JUDGE_MODEL, max_tokens=5,
+    r = litellm.completion(model=JUDGE_MODEL, max_tokens=5,
         messages=[{"role": "user", "content": f"{question}\n\n---\n{content}\n---\nAnswer with exactly YES or NO."}])
-    return "yes" in "".join(b.text for b in r.content if b.type == "text").strip().lower()
+    return "yes" in (r.choices[0].message.content or "").strip().lower()
 
 def _check(passed, msg):
     _status(passed, msg)
@@ -411,25 +413,51 @@ _check("fill in" not in SYSTEM_PROMPT.lower() and len(SYSTEM_PROMPT) > 200 and l
 
 tools = [
     {
-        "name": "get_constraints",
-        "description": "Retrieve engineering capacity, must-include initiatives, and constraints. Call this FIRST so scenarios respect the limits.",
-        "input_schema": {"type": "object", "properties": {}, "required": []},
+        "type": "function",
+        "function": {
+            "name": "get_constraints",
+            "description": "Retrieve engineering capacity, must-include initiatives, and constraints. Call this FIRST so scenarios respect the limits.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
     },
     {
-        "name": "save_scenario",
-        "description": "Save ONE prioritization option (not a final decision). Must name an explicit tradeoff - what this scenario gives up.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "name": {"type": "string", "description": "e.g. 'Quick Wins' or 'Strategic Bet'"},
-                "initiatives_included": {"type": "array", "items": {"type": "string"}, "description": "initiative ids, e.g. ['I-1','I-3']"},
-                "tradeoff": {"type": "string", "description": "What this scenario gives up"},
-            },
-            "required": ["name", "initiatives_included", "tradeoff"],
-        },
-    },
+        "type": "function",
+        "function": {
+            "name": "save_scenario",
+            "description": "Save ONE prioritization option (not a final decision). Must name an explicit tradeoff - what this scenario gives up.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "e.g. 'Quick Wins' or 'Strategic Bet'"
+                    },
+                    "initiatives_included": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "initiative ids, e.g. ['I-1','I-3']"
+                    },
+                    "tradeoff": {
+                        "type": "string",
+                        "description": "What this scenario gives up"
+                    }
+                },
+                "required": [
+                    "name",
+                    "initiatives_included",
+                    "tradeoff"
+                ]
+            }
+        }
+    }
 ]
-print('✓ Defined ' + str(len(tools)) + ' tool schema(s): ' + str([t['name'] for t in tools]))
+print('✓ Defined ' + str(len(tools)) + ' tool schema(s): ' + str([(t.get('function') or t)['name'] for t in tools]))
 
 
 # ### Build the Stage 2 agent
@@ -441,8 +469,8 @@ print("✓ Built the Stage 2 agent - brief + tools")
 # ### Run the eval + check your tools
 
 run_eval(agent_v2, "Stage 2 · Tools + loop")
-names = {t.get("name") for t in tools}
-descs_ok = all(t.get("description") and "FILL IN" not in t.get("description", "") and len(t.get("description", "")) > 15 for t in tools)
+names = {(t.get("function") or t).get("name") for t in tools}
+descs_ok = all((lambda d: d and "FILL IN" not in d and len(d) > 15)((t.get("function") or t).get("description", "")) for t in tools)
 _check("save_scenario" in names and descs_ok and len(tools) >= 1,
        "Tool check: " + str(len(tools)) + " tool(s) defined, descriptions written")
 

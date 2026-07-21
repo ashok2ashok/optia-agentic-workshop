@@ -28,7 +28,7 @@ green banners mean it's working.
 
 ## How to run
 1. Open **`Voice_Of_Customer_Agent.ipynb`** in VS Code / Cursor (Python + Jupyter extensions).
-2. Run the **Setup** cell; paste your Anthropic key into the `.env` it creates (never into a cell).
+2. Run the **Setup** cell; paste your OpenAI or Anthropic key into the `.env` it creates (never into a cell).
 3. Run top to bottom. Do the three **✏️ YOUR TURN** cells. Watch the score climb.
 
 Want the answer key? **`Voice_Of_Customer_Agent.py`** is the completed solution - run it straight through with

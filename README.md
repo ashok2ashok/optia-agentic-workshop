@@ -3,7 +3,7 @@
 > *"Optia" is a fictional eye-care company used purely as a scenario for this workshop. The product
 > names, feedback, and data are all invented for teaching and are not affiliated with any real company.*
 
-Five hands-on build-alongs. Each table builds **one** real AI agent - in Python, on the Anthropic API -
+Five hands-on build-alongs. Each table builds **one** real AI agent - in Python, on OpenAI or Anthropic models (via LiteLLM) -
 the way agents are actually built: a model that runs in a **loop** (it can call **tools**) with a
 **guardrail** wrapping it, developed **evals-first** so you can *measure* it getting better.
 
@@ -37,9 +37,10 @@ re-run an eval and watch a progress bar climb from a weak baseline to a working,
 
 ## Prerequisites
 - **Python 3.10+**
-- An **Anthropic API key** (get one at https://console.anthropic.com/). Running a full notebook makes
+- An **OpenAI or Anthropic API key** (OpenAI: https://platform.openai.com/  ·  Anthropic: https://console.anthropic.com/). Running a full notebook makes
   real API calls and consumes a small amount of credit - a few cents per group with the default models.
-- That's it. Each notebook installs its one dependency (`anthropic`) on first run.
+- That's it. Each notebook installs its one dependency (`litellm`) on first run.
+- Pick the model in `.env` with `WORKSHOP_MODEL` (any LiteLLM id). Recommended: `gpt-4o` (OpenAI) or `anthropic/claude-sonnet-5` (Anthropic).
 
 ## Run it
 1. Install once - see [SETUP.md](SETUP.md) (`python3 -m venv .venv && pip install -r requirements.txt`).
