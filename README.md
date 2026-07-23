@@ -3,7 +3,7 @@
 > *"Optia" is a fictional eye-care company used purely as a scenario for this workshop. The product
 > names, feedback, and data are all invented for teaching and are not affiliated with any real company.*
 
-Five hands-on build-alongs. Each table builds **one** real AI agent - in Python, on OpenAI or Anthropic models (via LiteLLM) -
+Two hands-on build-alongs. Each table builds **one** real AI agent - in Python, on OpenAI or Anthropic models (via LiteLLM) -
 the way agents are actually built: a model that runs in a **loop** (it can call **tools**) with a
 **guardrail** wrapping it, developed **evals-first** so you can *measure* it getting better.
 
@@ -11,14 +11,11 @@ You do not need to be an expert. Every notebook is three small edits (**✏️ Y
 **brief** (plain English), its **tool descriptions**, and **one line** of the guardrail. After each, you
 re-run an eval and watch a progress bar climb from a weak baseline to a working, guarded agent.
 
-## The five agents
+## The two agents
 | Group | Agent | Signature move |
 |---|---|---|
 | 1 | [Voice-of-Customer](group1_voice_of_customer/) | catches a safety comment and flags it for human review |
 | 2 | [Requirement-to-Story](group2_requirement_to_story/) | separates what was asked from invented scope ("assumptions to confirm") |
-| 3 | [Market & Competitive Scan](group3_market_scan/) | labels every item confirmed vs unverified, with sources |
-| 4 | [Launch & Release Comms](group4_launch_comms/) | never reworders a locked clinical claim; compliance banner on patient copy |
-| 5 | [Roadmap Tradeoff](group5_roadmap_tradeoff/) | presents scenarios with tradeoffs - AI recommends, humans decide |
 
 ## The arc (every notebook)
 | Stage | You add | Eval score |

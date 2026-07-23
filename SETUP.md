@@ -41,10 +41,10 @@ ANTHROPIC_API_KEY=sk-ant-...     # Anthropic keys start sk-ant-
 WORKSHOP_MODEL=gpt-4o
 ```
 Save and re-run the Setup cell; you want the `✓ Connected via LiteLLM - model: ...` banner. One `.env`
-serves all five groups. Never paste a key into a notebook cell.
+serves both groups. Never paste a key into a notebook cell.
 
 **Model choice:** defaults are `gpt-4o-mini` (OpenAI) and `anthropic/claude-sonnet-5` (Anthropic). `gpt-4o-mini`
-is cheap and fine for most groups; the Roadmap-Tradeoff agent (G5) scores a bit lower on it, so set `WORKSHOP_MODEL=gpt-4o` for its best result.
+is cheap and fine for both groups.
 
 **Important:** a matching key exported in your shell/kernel **overrides** `.env`. If a key is rejected but
 `.env` looks right, unset the stale one (e.g. `unset OPENAI_API_KEY` / `unset ANTHROPIC_API_KEY`).

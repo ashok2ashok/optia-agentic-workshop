@@ -7,3 +7,11 @@ __pycache__/
 # Facilitator + workshop-kit materials are hosted separately, not in the public repo:
 FACILITATOR.md
 workshop-kit/
+
+# WIP: agents 3-5 held back while their issues are fixed (kept locally, not pushed)
+group3_market_scan/
+group4_launch_comms/
+group5_roadmap_tradeoff/
+static_demos/Demo3_MarketScan.html
+static_demos/Demo4_LaunchComms.html
+static_demos/Demo5_RoadmapTradeoff.html
